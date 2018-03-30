@@ -14,8 +14,6 @@ void setup() {
   // Initialize screen
   screen_init();
 
-  //keypad();
-
   //while(true);
 
   // Displays the welcome screen
@@ -31,7 +29,10 @@ void screen_init()
 {
   
   myScreen.begin();
-  myScreen.clear(whiteColour);    
+  myScreen.clear(whiteColour);   
+  myScreen.setPenSolid(true);
+  myScreen.setFontSolid(false); 
+  myScreen.setFontSize(myScreen.fontMax() - 1);
 }
 
 void displayLandingPageDisplay()
@@ -269,7 +270,7 @@ void wpa2form(int currentPage, int thisNet)
       uint16_t  x, y, z;
       myScreen.getTouch(x, y, z);      
 
-      Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
+      //Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
     
       // Detect touch event, condition for button pressed
       if(z > 500)      
@@ -297,10 +298,189 @@ void loginPage()
     // Page Title
     myScreen.clear(whiteColour);
     myScreen.setFontSize(myScreen.fontMax() - 1); 
-    myScreen.gText(60, 20, "Waiting to connect", redColour);
+    myScreen.gText(35, 20, "Waiting to connect to ", redColour);
+    myScreen.gText(90, 60, ssid, redColour);
+
+    Serial.print("Attempting to connect to Network named: ");
+    // print the network name (SSID);
+    Serial.println(ssid);
+
+    char ssid_char[20];
+
+    ssid.toCharArray(ssid_char, 20);
+
+    WiFi.begin(ssid_char, password);
+
+    while ( WiFi.status() != WL_CONNECTED) {
+      // print dots while we wait to connect
+      Serial.print(".");
+      delay(300);
+    }
+  
+    while (WiFi.localIP() == INADDR_NONE) {
+      // print dots while we wait for an ip addresss
+      Serial.print(".");
+      delay(300);
+    }
+
+    Serial.println("\nIP Address obtained");
+    printWifiStatus();
+
+    if ( WiFi.status() == WL_CONNECTED && WiFi.localIP() != INADDR_NONE) {
+      //Notify user connection is successful
+      myScreen.clear(whiteColour);
+      myScreen.setFontSize(myScreen.fontMax() - 1);
+      myScreen.gText(60, 20, "Connected to Wifi", redColour);
+      myScreen.gText(80, 50, "Successfully!", redColour);
+
+      delay(1000);
+
+      loginForm();
+    }
+}
+
+char username[20];
+char userpwd[20];
+
+String username_state = "Enter Username";
+String userpwd_state = "Enter Password";
+
+
+void loginForm()  {
+
+  //Title of Login Page
+  myScreen.clear(whiteColour);
+  myScreen.setFontSize(myScreen.fontMax() - 0);
+  myScreen.gText(90, 20, "LOGIN PAGE", redColour);
+
+  //User Id Button
+  myScreen.dRectangle(80, 100, 140, 30, redColour); 
+  myScreen.setFontSize(1);  
+
+  if(username_state != "Enter Username")  {
+    myScreen.gText(80, 80, "Username: " + String(username), blackColour);      
+  }
+  myScreen.gText(90, 110, username_state, whiteColour);  
+
+  //Password Button
+  myScreen.dRectangle(80, 160, 140, 30, redColour); 
+  myScreen.setFontSize(1);  
+  if(userpwd_state != "Enter Password")  {
+    myScreen.gText(80, 140, "Password: " + String(userpwd), blackColour);      
+  }
+  myScreen.gText(90, 170, userpwd_state, whiteColour);
+
+  if(userpwd_state == "Change Password" && username_state == "Change Username")
+  {
+    Serial.println("OK");
+    
+    myScreen.dRectangle(80, 200, 140, 30, greenColour); 
+    myScreen.setFontSize(1);  
+    myScreen.gText(120, 210, "Connect", blackColour);
+  }
+
+  while(true)
+  {
+    
+    if(myScreen.isTouch() > 0)
+    {
+      uint16_t  x, y, z;
+      myScreen.getTouch(x, y, z);      
+
+      //Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
+    
+      // Detect touch event, condition for button pressed
+      if(z > 500)      
+      {          
+        if((x >= 80 && x <= 225) && (y >= 95 && y <= 125))
+        {          
+          keypad(myScreen, username);                      
+          username_state = "Change Username";
+          loginForm();
+        }
+        else if((x >= 80 && x <= 225) && (y >= 155 && y <= 185))
+        {
+          keypad(myScreen, userpwd);                      
+          userpwd_state = "Change Password";
+          loginForm();
+        }
+        else if((x >= 80 && x <= 225) && (y >= 190 && y <= 215) && userpwd_state == "Change Password" && username_state == "Change Username")
+        {          
+          login_attempt();
+        }
+      }
+    }
+  }
+  
 }
 
 
+char server[] = "http://coldmaterweb.herokuapp.com";   
+
+WiFiClient client;
+
+void login_attempt() {
+
+  myScreen.clear(whiteColour);
+  myScreen.setFontSize(myScreen.fontMax() - 0);
+  myScreen.gText(90, 20, "LOGIN Attempt", redColour);
+
+  Serial.println("\nStarting connection to server...");
+  // if you get a connection, report back via serial:
+  if (client.connect(server, 80)) {
+    Serial.println("connected to server");
+    // Make a HTTP request:
+    client.println("GET https://coldmaterweb.herokuapp.com/user/username%3D" + String(username) + "&password%3D" + String(userpwd) + "/ HTTP/1.1");
+    client.println("Accept: application/json");
+    client.println("Host: coldmaterweb.herokuapp.com");
+    client.println("Cache-Control: no-cache");
+    client.println("Connection: close");
+    client.println();
+  }
+  else {
+    Serial.println("Server not found!");  
+  }
+
+  String resp;
+
+  while(true) {
+    while (client.available()) {
+      resp += char(client.read());
+      //Serial.write(c);
+    }  
+  
+    resp = resp.substring(resp.indexOf('{') + 1, resp.lastIndexOf('}'));
+  
+    // if the server's disconnected, stop the client:
+    if (!client.connected()) {
+      Serial.println();
+      Serial.println("disconnecting from server.");
+      client.stop();
+  
+      // do nothing forevermore:
+      Serial.println(resp);   
+      break;
+    }
+  }
+  
+}
+
+void printWifiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print your WiFi shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
 
 
 
