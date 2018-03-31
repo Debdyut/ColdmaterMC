@@ -15,9 +15,9 @@ void setup() {
   screen_init();
 
   //while(true);
-
+  Dashboard();
   // Displays the welcome screen
-  displayLandingPageDisplay();  
+  //displayLandingPageDisplay();  
 }
 
 void loop() {
@@ -457,12 +457,48 @@ void login_attempt() {
       Serial.println("disconnecting from server.");
       client.stop();
   
-      // do nothing forevermore:
       Serial.println(resp);   
       break;
     }
+    Dashboard();
+    
   }
   
+}
+
+void Dashboard() {
+  //Title of Page
+  myScreen.clear(whiteColour);
+  myScreen.setFontSize(myScreen.fontMax() - 0);
+  myScreen.gText(100, 20, "Dashboard", redColour);
+
+  // + button
+  myScreen.circle (290, 70, 20, redColour);
+  myScreen.setFontSize(myScreen.fontMax() - 1);  
+  myScreen.gText(285, 63, "+", whiteColour);
+  
+  // - button 
+  myScreen.circle (30, 70, 20, redColour);
+  myScreen.setFontSize(myScreen.fontMax() - 1);  
+  myScreen.gText(24, 63, "-", whiteColour);
+
+  //Temp Control
+  myScreen.setFontSize(myScreen.fontMax() - 0);
+  myScreen.gText(87, 60, "Temperature", blueColour);
+
+  // + button
+  myScreen.circle (290, 140, 20, redColour);
+  myScreen.setFontSize(myScreen.fontMax() - 1);  
+  myScreen.gText(285, 133, "+", whiteColour);
+  
+  // - button 
+  myScreen.circle (30, 140, 20, redColour);
+  myScreen.setFontSize(myScreen.fontMax() - 1);  
+  myScreen.gText(24, 133, "-", whiteColour);
+
+  // Control 2
+  myScreen.setFontSize(myScreen.fontMax() - 0);
+  myScreen.gText(87, 130, "Control 2", blueColour);
 }
 
 void printWifiStatus() {
