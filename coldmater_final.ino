@@ -3,13 +3,19 @@
 #include "Screen_K35_SPI.h"
 #include <WiFi.h>
 #include "keyboards.h"
+#include <Adafruit_Fingerprint.h>
+
+// For fingerprint scanner
+#define mySerial Serial1
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
 
 /* Global variables declaration */
 Screen_K35_SPI myScreen;  // Declaring a new screen object
 
 void setup() {
 
-  Serial.begin(9600);  
+  Serial.begin(9600);      
   
   // Initialize screen
   screen_init();
@@ -43,10 +49,18 @@ void displayLandingPageDisplay()
   myScreen.setFontSize(myScreen.fontMax() - 1);    
   myScreen.gText(100, 20, "COLDMATER", myScreen.calculateColour(255, 0, 0));
 
+  myScreen.setFontSize(1);  
+  myScreen.gText(20, 40, "Choose a method for authentication", blackColour);
+
   // Draw button
   myScreen.dRectangle(80, 20 + myScreen.fontSizeY() * 3, 140, 40, redColour); 
   myScreen.setFontSize(1);  
-  myScreen.gText(95, 45  + myScreen.fontSizeY() * 3, "CONFIGURE WiFi", whiteColour);
+  myScreen.gText(95, 70, "Internet", whiteColour);
+
+  // Draw button
+  myScreen.dRectangle(80, 120, 140, 40, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(95, 135, "Fingerprint", whiteColour);
 
   // Wait for touch event
   while(true)
@@ -58,10 +72,16 @@ void displayLandingPageDisplay()
       myScreen.getTouch(x, y, z);      
 
       // Detect touch event, condition for button pressed
-      if(z > 500 && (x >= 80 && x <= 220) && (y >= 68 && y <= 84))
-      {        
-          // Display screen to configure Wifi
-          configureWifi();  
+      if(z > 500) { 
+        if ((x >= 80 && x <= 220) && (y >= 68 && y <= 84))
+        {        
+            // Display screen to configure Wifi
+            configureWifi();  
+        }
+        else if ((x >= 80 && x <= 220) && (y >= 120 && y <= 160))
+        {
+          fingerprintAuth();  
+        }
       }
       
     } // end of if    
@@ -69,6 +89,127 @@ void displayLandingPageDisplay()
 } // end of function
 
 String ssid = "SSID: None provided";
+
+void fingerprintAuth() {
+  
+  myScreen.clear(whiteColour);
+  myScreen.setFontSize(myScreen.fontMax() - 1); 
+  myScreen.gText(10, 10, "Fingerprint Authenticator", redColour);
+  myScreen.setFontSize(1); 
+
+  // set the data rate for the sensor serial port
+  finger.begin(57600);
+  
+  if (finger.verifyPassword()) {        
+    myScreen.gText(50, 117, "Waiting for valid finger...", blackColour);
+
+    while(1) {
+      
+      if(getFingerprintIDez() != -1) {
+        myScreen.dRectangle(40, 110, 240, 30, whiteColour); 
+        myScreen.gText(50, 117, "Authentication Successful!", blackColour);
+        delay(1000);
+        Dashboard();
+      }        
+      delay(50);            //don't need to run this at full speed.        
+    }
+    
+  } 
+  else {
+    myScreen.gText(10, 10, "Fingerprint sensor not responsive!", redColour);
+    myScreen.gText(10, 10, "Try internet login", redColour);    
+  }  
+
+  
+  
+}
+
+uint8_t getFingerprintID() {
+  uint8_t p = finger.getImage();
+  switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("Image taken");
+      break;
+    case FINGERPRINT_NOFINGER:
+      Serial.println("No finger detected");
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Communication error");
+      return p;
+    case FINGERPRINT_IMAGEFAIL:
+      Serial.println("Imaging error");
+      return p;
+    default:
+      Serial.println("Unknown error");
+      return p;
+  }
+
+  // OK success!
+
+  p = finger.image2Tz();
+  switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("Image converted");
+      break;
+    case FINGERPRINT_IMAGEMESS:
+      Serial.println("Image too messy");
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Communication error");
+      return p;
+    case FINGERPRINT_FEATUREFAIL:
+      Serial.println("Could not find fingerprint features");
+      return p;
+    case FINGERPRINT_INVALIDIMAGE:
+      Serial.println("Could not find fingerprint features");
+      return p;
+    default:
+      Serial.println("Unknown error");
+      return p;
+  }
+  
+  // OK converted!
+  p = finger.fingerFastSearch();
+  if (p == FINGERPRINT_OK) {
+    Serial.println("Found a print match!");
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    Serial.println("Communication error");
+    return p;
+  } else if (p == FINGERPRINT_NOTFOUND) {
+    Serial.println("Did not find a match");
+    return p;
+  } else {
+    Serial.println("Unknown error");
+    return p;
+  }   
+  
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of "); Serial.println(finger.confidence); 
+
+  return finger.fingerID;
+}
+
+// returns -1 if failed, otherwise returns ID #
+int getFingerprintIDez() {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return -1;
+  
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of "); Serial.println(finger.confidence);  
+  
+  return finger.fingerID; 
+  
+}
+
+
 
 void configureWifi()
 {
