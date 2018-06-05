@@ -26,7 +26,9 @@ void setup() {
   //while(true);
   //Dashboard();
   // Displays the welcome screen
-  displayLandingPageDisplay();  
+  //displayLandingPageDisplay();  
+
+  Dashboard();
   
 }
 
@@ -643,9 +645,14 @@ void Dashboard() {
   myScreen.gText(87, 130, "Control 2", blueColour);
 
   // Add user button
-  myScreen.dRectangle(80, 200, 140, 30, redColour); 
+  myScreen.dRectangle(10, 200, 140, 30, redColour); 
   myScreen.setFontSize(1);  
-  myScreen.gText(95, 210, "Settings", whiteColour);
+  myScreen.gText(25, 210, "Settings", whiteColour);
+
+  // Add user button
+  myScreen.dRectangle(170, 200, 140, 30, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(185, 210, "Logout", whiteColour);
 
   while(true)
   {
@@ -655,14 +662,18 @@ void Dashboard() {
       uint16_t  x, y, z;
       myScreen.getTouch(x, y, z);      
 
-      //Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
+      Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
     
       // Detect touch event, condition for button pressed
       if(z > 500)      
       {          
-        if((x >= 80 && x <= 225) && (y >= 200 && y <= 230))
+        if((x >= 10 && x <= 150) && (y >= 185 && y <= 210))
         {          
           settingsPage();
+        }
+        else if((x >= 170 && x <= 310) && (y >= 185 && y <= 210))
+        {          
+          displayLandingPageDisplay();
         }        
       }
     }
@@ -683,6 +694,9 @@ void settingsPage() {
   myScreen.setFontSize(1);  
   myScreen.gText(75, 60, "Manage Fingerprints", whiteColour);
 
+  // Back button
+  drawBackButton();  
+
   // Wait for touch event
   while(true)
   {
@@ -698,7 +712,12 @@ void settingsPage() {
         {        
             // Display screen to configure Wifi
             fingerPrintSettings();
-        }        
+        }  
+        else if ((x >= 275 && x <= 310) && (y >= 180 && y <= 215))
+        {        
+            // Display screen to configure Wifi
+            Dashboard();
+        }       
       }
       
     } // end of if    
@@ -724,6 +743,9 @@ void fingerPrintSettings() {
   myScreen.setFontSize(1);  
   myScreen.gText(75, 100, "Clean DB", whiteColour);
 
+   // Back button
+  drawBackButton();  
+
   // Wait for touch event
   while(true)
   {
@@ -745,7 +767,11 @@ void fingerPrintSettings() {
             // Display screen to configure Wifi
             cleanDB();
         }
-              
+        else if ((x >= 275 && x <= 310) && (y >= 180 && y <= 215))
+        {        
+            // Display screen to configure Wifi
+            settingsPage();
+        }       
       }
       
     } // end of if    
@@ -766,7 +792,7 @@ void addUser() {
   myScreen.gText(100, 20, "Add User", myScreen.calculateColour(255, 0, 0));
 
   myScreen.setFontSize(1);  
-  myScreen.gText(20, 40, "Choose a method for login", blackColour);
+  myScreen.gText(50, 40, "Choose a method for login", blackColour);
 
   // Draw button
   myScreen.dRectangle(80, 20 + myScreen.fontSizeY() * 3, 140, 40, redColour); 
@@ -777,6 +803,9 @@ void addUser() {
   myScreen.dRectangle(80, 120, 140, 40, redColour); 
   myScreen.setFontSize(1);  
   myScreen.gText(95, 135, "Fingerprint", whiteColour);
+
+  // Back button
+  drawBackButton();  
 
   // Wait for touch event
   while(true)
@@ -798,6 +827,11 @@ void addUser() {
         {
           addUserFingerPrint();  
         }
+        else if ((x >= 275 && x <= 310) && (y >= 180 && y <= 215))
+        {        
+            // Display screen to configure Wifi
+            fingerPrintSettings();
+        } 
       }
       
     } // end of if    
@@ -810,7 +844,31 @@ void addUserInternet() {
   myScreen.setPenSolid(true);
   myScreen.setFontSolid(false);
   myScreen.setFontSize(myScreen.fontMax() - 1);    
-  myScreen.gText(100, 20, "Add User Internet", myScreen.calculateColour(255, 0, 0));
+  myScreen.gText(70, 20, "Add User Internet", myScreen.calculateColour(255, 0, 0));
+
+  drawBackButton();  
+
+  while(true)
+  {
+    if(myScreen.isTouch() > 0)
+    {
+      uint16_t  x, y, z;
+      myScreen.getTouch(x, y, z);      
+      
+      Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
+
+      // Detect touch event, condition for button pressed
+      if(z > 500) { 
+        if ((x >= 275 && x <= 310) && (y >= 180 && y <= 215))
+        {        
+            // Display screen to configure Wifi
+            addUser();
+        }        
+      }
+      
+    } // end of if  
+  } 
+  
 }
 
 uint8_t id;
@@ -821,12 +879,12 @@ void addUserFingerPrint() {
   myScreen.setPenSolid(true);
   myScreen.setFontSolid(false);
   myScreen.setFontSize(myScreen.fontMax() - 1);    
-  myScreen.gText(20, 20, "Add User Fingerprint", myScreen.calculateColour(255, 0, 0));
+  myScreen.gText(20, 20, "Add User Fingerprint", myScreen.calculateColour(255, 0, 0));  
 
   finger.getTemplateCount();
   id = finger.templateCount + 1;  
 
-  while (!  getFingerprintEnroll() ); 
+  while (!  getFingerprintEnroll() );
   
 }
 
@@ -995,5 +1053,11 @@ void printWifiStatus() {
   Serial.println(" dBm");
 }
 
+void drawBackButton() {
+  // Back button
+  myScreen.circle (290, 215, 20, redColour);
+  myScreen.setFontSize(myScreen.fontMax() - 1);  
+  myScreen.gText(285, 208, "<", whiteColour);  
+}
 
 
