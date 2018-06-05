@@ -16,6 +16,9 @@ Screen_K35_SPI myScreen;  // Declaring a new screen object
 void setup() {
 
   Serial.begin(9600);      
+
+  // set the data rate for the sensor serial port
+  finger.begin(57600);
   
   // Initialize screen
   screen_init();
@@ -43,6 +46,7 @@ void screen_init()
 
 void displayLandingPageDisplay()
 {
+  myScreen.clear(whiteColour);
   // Title
   myScreen.setPenSolid(true);
   myScreen.setFontSolid(false);
@@ -97,8 +101,6 @@ void fingerprintAuth() {
   myScreen.gText(10, 10, "Fingerprint Authenticator", redColour);
   myScreen.setFontSize(1); 
 
-  // set the data rate for the sensor serial port
-  finger.begin(57600);
   
   if (finger.verifyPassword()) {        
     myScreen.gText(50, 117, "Waiting for valid finger...", blackColour);
@@ -640,7 +642,255 @@ void Dashboard() {
   // Control 2
   myScreen.setFontSize(myScreen.fontMax() - 0);
   myScreen.gText(87, 130, "Control 2", blueColour);
+
+  // Add user button
+  myScreen.dRectangle(80, 200, 140, 30, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(95, 210, "+ ADD USER", whiteColour);
+
+  while(true)
+  {
+    
+    if(myScreen.isTouch() > 0)
+    {
+      uint16_t  x, y, z;
+      myScreen.getTouch(x, y, z);      
+
+      //Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
+    
+      // Detect touch event, condition for button pressed
+      if(z > 500)      
+      {          
+        if((x >= 80 && x <= 225) && (y >= 200 && y <= 230))
+        {          
+          addUser();
+        }        
+      }
+    }
+  }
+  
 }
+
+void addUser() {
+  // Title
+  myScreen.clear(whiteColour);
+  myScreen.setPenSolid(true);
+  myScreen.setFontSolid(false);
+  myScreen.setFontSize(myScreen.fontMax() - 1);    
+  myScreen.gText(100, 20, "Add User", myScreen.calculateColour(255, 0, 0));
+
+  myScreen.setFontSize(1);  
+  myScreen.gText(20, 40, "Choose a method for login", blackColour);
+
+  // Draw button
+  myScreen.dRectangle(80, 20 + myScreen.fontSizeY() * 3, 140, 40, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(95, 70, "Internet", whiteColour);
+
+  // Draw button
+  myScreen.dRectangle(80, 120, 140, 40, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(95, 135, "Fingerprint", whiteColour);
+
+  // Wait for touch event
+  while(true)
+  {
+    
+    if(myScreen.isTouch() > 0)
+    {
+      uint16_t  x, y, z;
+      myScreen.getTouch(x, y, z);      
+
+      // Detect touch event, condition for button pressed
+      if(z > 500) { 
+        if ((x >= 80 && x <= 220) && (y >= 68 && y <= 84))
+        {        
+            // Display screen to configure Wifi
+            addUserInternet();
+        }
+        else if ((x >= 80 && x <= 220) && (y >= 120 && y <= 160))
+        {
+          addUserFingerPrint();  
+        }
+      }
+      
+    } // end of if    
+  } // end of while
+}
+
+void addUserInternet() {
+  myScreen.clear(whiteColour);
+  // Title
+  myScreen.setPenSolid(true);
+  myScreen.setFontSolid(false);
+  myScreen.setFontSize(myScreen.fontMax() - 1);    
+  myScreen.gText(100, 20, "Add User Internet", myScreen.calculateColour(255, 0, 0));
+}
+
+uint8_t id;
+
+void addUserFingerPrint() {
+  myScreen.clear(whiteColour);
+  // Title
+  myScreen.setPenSolid(true);
+  myScreen.setFontSolid(false);
+  myScreen.setFontSize(myScreen.fontMax() - 1);    
+  myScreen.gText(20, 20, "Add User Fingerprint", myScreen.calculateColour(255, 0, 0));
+
+  finger.getTemplateCount();
+  id = finger.templateCount + 1;  
+
+  while (!  getFingerprintEnroll() ); 
+  
+}
+
+// Function to add a fingerprint for a new user
+uint8_t getFingerprintEnroll() {
+
+  int p = -1;
+  myScreen.setFontSize(1);    
+  myScreen.dRectangle(40, 110, 240, 30, whiteColour); 
+  myScreen.gText(15, 117, "Waiting for valid finger to enroll", blackColour);  
+  String new_id_msg = "ID: " + String(id);
+  myScreen.gText(80, 133, new_id_msg, blackColour);  
+  while (p != FINGERPRINT_OK) {
+    p = finger.getImage();
+    switch (p) {
+    case FINGERPRINT_OK:
+      myScreen.dRectangle(0, 110, 319, 60, whiteColour); 
+      myScreen.gText(80, 117, "Image taken", blackColour);        
+      break;
+    case FINGERPRINT_NOFINGER:      
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Communication error");
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      Serial.println("Imaging error");
+      break;
+    default:
+      Serial.println("Unknown error");
+      break;
+    }
+  }
+
+  // OK success!
+
+  p = finger.image2Tz(1);
+  switch (p) {
+    case FINGERPRINT_OK:
+      myScreen.gText(80, 135, "Image converted", blackColour);              
+      break;
+    case FINGERPRINT_IMAGEMESS:
+      Serial.println("Image too messy");
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Communication error");
+      return p;
+    case FINGERPRINT_FEATUREFAIL:
+      Serial.println("Could not find fingerprint features");
+      return p;
+    case FINGERPRINT_INVALIDIMAGE:
+      Serial.println("Could not find fingerprint features");
+      return p;
+    default:
+      Serial.println("Unknown error");
+      return p;
+  }
+
+  myScreen.gText(80, 155, "Remove finger", blackColour);                
+  delay(2000);
+  p = 0;
+  while (p != FINGERPRINT_NOFINGER) {
+    p = finger.getImage();
+  }
+  Serial.print("ID "); Serial.println(id);
+  p = -1;
+  myScreen.dRectangle(0, 110, 319, 80, whiteColour); 
+  myScreen.gText(60, 100, "Place same finger again", blackColour);                   
+  while (p != FINGERPRINT_OK) {
+    p = finger.getImage();
+    switch (p) {
+    case FINGERPRINT_OK:
+      myScreen.gText(80, 120, "Image taken", blackColour);                         
+      break;
+    case FINGERPRINT_NOFINGER:
+      Serial.print(".");
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Communication error");
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      Serial.println("Imaging error");
+      break;
+    default:
+      Serial.println("Unknown error");
+      break;
+    }
+  }
+
+  // OK success!
+
+  p = finger.image2Tz(2);
+  switch (p) {
+    case FINGERPRINT_OK:
+      myScreen.gText(80, 140, "Image converted", blackColour);                               
+      break;
+    case FINGERPRINT_IMAGEMESS:
+      Serial.println("Image too messy");
+      return p;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Communication error");
+      return p;
+    case FINGERPRINT_FEATUREFAIL:
+      Serial.println("Could not find fingerprint features");
+      return p;
+    case FINGERPRINT_INVALIDIMAGE:
+      Serial.println("Could not find fingerprint features");
+      return p;
+    default:
+      Serial.println("Unknown error");
+      return p;
+  }
+  
+  // OK converted!
+  Serial.print("Creating model for #");  Serial.println(id);
+  
+  p = finger.createModel();
+  if (p == FINGERPRINT_OK) {
+    myScreen.gText(80, 160, "Prints matched!", blackColour);       
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    Serial.println("Communication error");
+    return p;
+  } else if (p == FINGERPRINT_ENROLLMISMATCH) {
+    Serial.println("Fingerprints did not match");
+    return p;
+  } else {
+    Serial.println("Unknown error");
+    return p;
+  }   
+  
+  Serial.print("ID "); Serial.println(id);
+  p = finger.storeModel(id);
+  if (p == FINGERPRINT_OK) {
+    myScreen.gText(100, 180, "Stored!", blackColour);    
+    delay(1000);
+    displayLandingPageDisplay();   
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    Serial.println("Communication error");
+    return p;
+  } else if (p == FINGERPRINT_BADLOCATION) {
+    Serial.println("Could not store in that location");
+    return p;
+  } else if (p == FINGERPRINT_FLASHERR) {
+    Serial.println("Error writing to flash");
+    return p;
+  } else {
+    Serial.println("Unknown error");
+    return p;
+  }   
+} // end of function
+
 
 void printWifiStatus() {
   // print the SSID of the network you're attached to:
