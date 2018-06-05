@@ -15,9 +15,9 @@ void setup() {
   screen_init();
 
   //while(true);
-  Dashboard();
+  //Dashboard();
   // Displays the welcome screen
-  //displayLandingPageDisplay();  
+  displayLandingPageDisplay();  
 }
 
 void loop() {
