@@ -27,6 +27,7 @@ void setup() {
   //Dashboard();
   // Displays the welcome screen
   displayLandingPageDisplay();  
+  
 }
 
 void loop() {
@@ -122,8 +123,6 @@ void fingerprintAuth() {
     myScreen.gText(10, 10, "Try internet login", redColour);    
   }  
 
-  
-  
 }
 
 uint8_t getFingerprintID() {
@@ -646,7 +645,7 @@ void Dashboard() {
   // Add user button
   myScreen.dRectangle(80, 200, 140, 30, redColour); 
   myScreen.setFontSize(1);  
-  myScreen.gText(95, 210, "+ ADD USER", whiteColour);
+  myScreen.gText(95, 210, "Settings", whiteColour);
 
   while(true)
   {
@@ -663,12 +662,99 @@ void Dashboard() {
       {          
         if((x >= 80 && x <= 225) && (y >= 200 && y <= 230))
         {          
-          addUser();
+          settingsPage();
         }        
       }
     }
   }
   
+}
+
+void settingsPage() {
+  // Title
+  myScreen.clear(whiteColour);
+  myScreen.setPenSolid(true);
+  myScreen.setFontSolid(false);
+  myScreen.setFontSize(myScreen.fontMax() - 1);    
+  myScreen.gText(100, 20, "Settings", myScreen.calculateColour(255, 0, 0));
+
+  // Draw button
+  myScreen.dRectangle(70, 50, 160, 30, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(75, 60, "Manage Fingerprints", whiteColour);
+
+  // Wait for touch event
+  while(true)
+  {
+    
+    if(myScreen.isTouch() > 0)
+    {
+      uint16_t  x, y, z;
+      myScreen.getTouch(x, y, z);      
+
+      // Detect touch event, condition for button pressed
+      if(z > 500) { 
+        if ((x >= 70 && x <= 230) && (y >= 50 && y <= 80))
+        {        
+            // Display screen to configure Wifi
+            fingerPrintSettings();
+        }        
+      }
+      
+    } // end of if    
+  } // end of while
+  
+}
+
+void fingerPrintSettings() {
+  // Title
+  myScreen.clear(whiteColour);
+  myScreen.setPenSolid(true);
+  myScreen.setFontSolid(false);
+  myScreen.setFontSize(myScreen.fontMax() - 1);    
+  myScreen.gText(100, 20, "Settings", myScreen.calculateColour(255, 0, 0));
+
+  // Draw button
+  myScreen.dRectangle(70, 50, 160, 30, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(75, 60, "Add User", whiteColour);
+
+  // Draw button
+  myScreen.dRectangle(70, 90, 160, 30, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(75, 100, "Clean DB", whiteColour);
+
+  // Wait for touch event
+  while(true)
+  {
+    
+    if(myScreen.isTouch() > 0)
+    {
+      uint16_t  x, y, z;
+      myScreen.getTouch(x, y, z);      
+
+      // Detect touch event, condition for button pressed
+      if(z > 500) { 
+        if ((x >= 70 && x <= 230) && (y >= 50 && y <= 80))
+        {        
+            // Display screen to configure Wifi
+            addUser();
+        }  
+        else if ((x >= 70 && x <= 230) && (y >= 90 && y <= 120))
+        {        
+            // Display screen to configure Wifi
+            cleanDB();
+        }
+              
+      }
+      
+    } // end of if    
+  } // end of while
+  
+}
+
+void cleanDB() {
+  finger.emptyDatabase();  
 }
 
 void addUser() {
