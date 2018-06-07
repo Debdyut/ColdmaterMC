@@ -18,6 +18,7 @@ void setup() {
   String machineid = "CMM0000001";
 
   Serial.begin(9600);      
+  pinMode(10, OUTPUT);
 
   // set the data rate for the sensor serial port
   finger.begin(57600);
@@ -28,9 +29,9 @@ void setup() {
   //while(true);
   //Dashboard();
   // Displays the welcome screen
-  //displayLandingPageDisplay();  
+  displayLandingPageDisplay();  
 
-  Dashboard();
+  //Dashboard();
   
 }
 
@@ -672,8 +673,25 @@ void Dashboard() {
   myScreen.clear(whiteColour);
   myScreen.setFontSize(myScreen.fontMax() - 0);
   myScreen.gText(100, 20, "Dashboard", redColour);  
+  
+  String resp1 = getTemp();  
+  resp1.replace("\"", "");
+  Serial.println(resp1);
+  String success = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
+  resp1 = resp1.substring(resp1.indexOf(',')+2);
+  String set_temp = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
+  resp1 = resp1.substring(resp1.indexOf(',')+2);
+  String machine_status = resp1.substring(resp1.indexOf(':') + 2);
 
-  Serial.println(getTemp());
+  Serial.println(success);
+  Serial.println(set_temp);
+  Serial.println(machine_status);
+
+  if(machine_status.equals("On"))
+  {
+    digitalWrite(10, HIGH);  
+  }      
+  else digitalWrite(10, LOW);  
 
   //Temp Control
   myScreen.setFontSize(1);
