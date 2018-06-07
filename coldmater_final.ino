@@ -15,6 +15,8 @@ Screen_K35_SPI myScreen;  // Declaring a new screen object
 
 void setup() {
 
+  String machineid = "CMM0000001";
+
   Serial.begin(9600);      
 
   // set the data rate for the sensor serial port
@@ -562,6 +564,7 @@ void loginForm()  {
 char server[] = "http://coldmaterweb.herokuapp.com";   
 
 WiFiClient client;
+bool client_connected = false;
 
 void login_attempt() {
 
@@ -573,13 +576,14 @@ void login_attempt() {
   // if you get a connection, report back via serial:
   if (client.connect(server, 80)) {
     Serial.println("connected to server");
+    client_connected = true;
     // Make a HTTP request:
     client.println("GET https://coldmaterweb.herokuapp.com/user/username%3D" + String(username) + "&password%3D" + String(userpwd) + "/ HTTP/1.1");
     client.println("Accept: application/json");
     client.println("Host: coldmaterweb.herokuapp.com");
     client.println("Cache-Control: no-cache");
     client.println("Connection: close");
-    client.println();
+    client.println();    
   }
   else {
     Serial.println("Server not found!");  
@@ -594,41 +598,86 @@ void login_attempt() {
     }  
   
     resp = resp.substring(resp.indexOf('{') + 1, resp.lastIndexOf('}'));
-  
+    Serial.println(resp);    
+
+      
     // if the server's disconnected, stop the client:
+    
     if (!client.connected()) {
       Serial.println();
       Serial.println("disconnecting from server.");
       client.stop();
-  
-      Serial.println(resp);   
+      client_connected = false;
       break;
     }
+    
+
+    // Todo login auth
+
+    delay(1000);
     Dashboard();
     
   }
+  // Todo cannot login at the moment
   
+}
+
+String getTemp() {
+    Serial.println("\nStarting connection to server...");
+    // if you get a connection, report back via serial:    
+    if(client_connected) {
+      client.stop();
+      delay(1000);
+    }
+    if (client.connect(server, 80)) {
+      Serial.println("connected to server");
+      // Make a HTTP request:
+      client.println("GET https://coldmaterweb.herokuapp.com/machine_info/CMM0000001/15/23 HTTP/1.1");
+      client.println("Accept: application/json");
+      client.println("Host: coldmaterweb.herokuapp.com");
+      client.println("Cache-Control: no-cache");
+      client.println("Connection: close");
+      client.println();
+    }
+    else {
+      Serial.println("Server not found!");  
+    }
+
+    String resp1;
+
+    while(true) {
+      while (client.available()) {
+        resp1 += char(client.read());
+        //Serial.write(c);
+    }  
+  
+    resp1 = resp1.substring(resp1.indexOf('{') + 1, resp1.lastIndexOf('}'));    
+
+    // if the server's disconnected, stop the client:    
+    if (!client.connected()) {
+      Serial.println();
+      Serial.println("disconnecting from server.");
+      client.stop();
+
+      break;
+    }    
+      
+  }
+
+  return resp1;
 }
 
 void Dashboard() {
   //Title of Page
   myScreen.clear(whiteColour);
   myScreen.setFontSize(myScreen.fontMax() - 0);
-  myScreen.gText(100, 20, "Dashboard", redColour);
+  myScreen.gText(100, 20, "Dashboard", redColour);  
 
-  // + button
-  myScreen.circle (290, 70, 20, redColour);
-  myScreen.setFontSize(myScreen.fontMax() - 1);  
-  myScreen.gText(285, 63, "+", whiteColour);
-  
-  // - button 
-  myScreen.circle (30, 70, 20, redColour);
-  myScreen.setFontSize(myScreen.fontMax() - 1);  
-  myScreen.gText(24, 63, "-", whiteColour);
+  Serial.println(getTemp());
 
   //Temp Control
-  myScreen.setFontSize(myScreen.fontMax() - 0);
-  myScreen.gText(87, 60, "Temperature", blueColour);
+  myScreen.setFontSize(1);
+  myScreen.gText(10, 60, "Ambient Temperature: 35 &deg;C", blueColour);
 
   // + button
   myScreen.circle (290, 140, 20, redColour);
@@ -662,7 +711,7 @@ void Dashboard() {
       uint16_t  x, y, z;
       myScreen.getTouch(x, y, z);      
 
-      Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
+      //Serial.println("x: " + String(x) + "y: " + String(y) + "z: " + String(z));
     
       // Detect touch event, condition for button pressed
       if(z > 500)      
