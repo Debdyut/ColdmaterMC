@@ -13,6 +13,10 @@ Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 /* Global variables declaration */
 Screen_K35_SPI myScreen;  // Declaring a new screen object
 
+String auth_method;
+bool online = false;
+int desired_temp = 8;
+
 void setup() {
 
   String machineid = "CMM0000001";
@@ -31,7 +35,7 @@ void setup() {
   // Displays the welcome screen
   displayLandingPageDisplay();  
 
-  //Dashboard();
+  //fingerprint_transit();
   
 }
 
@@ -85,11 +89,13 @@ void displayLandingPageDisplay()
       if(z > 500) { 
         if ((x >= 80 && x <= 220) && (y >= 68 && y <= 84))
         {        
+            auth_method = "internet";
             // Display screen to configure Wifi
             configureWifi();  
         }
         else if ((x >= 80 && x <= 220) && (y >= 120 && y <= 160))
         {
+          auth_method = "fingerprint";
           fingerprintAuth();  
         }
       }
@@ -117,7 +123,7 @@ void fingerprintAuth() {
         myScreen.dRectangle(40, 110, 240, 30, whiteColour); 
         myScreen.gText(50, 117, "Authentication Successful!", blackColour);
         delay(1000);
-        Dashboard();
+        fingerprint_transit();
       }        
       delay(50);            //don't need to run this at full speed.        
     }
@@ -128,6 +134,50 @@ void fingerprintAuth() {
     myScreen.gText(10, 10, "Try internet login", redColour);    
   }  
 
+}
+
+void fingerprint_transit() {
+  myScreen.clear(whiteColour);
+  // Title
+  myScreen.setPenSolid(true);
+  myScreen.setFontSolid(false);
+  myScreen.setFontSize(myScreen.fontMax() - 1);    
+  myScreen.gText(100, 20, "COLDMATER", myScreen.calculateColour(255, 0, 0));
+
+  // Draw button
+  myScreen.dRectangle(80, 20 + myScreen.fontSizeY() * 3, 140, 40, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(95, 80, "Go Online", whiteColour);
+
+  // Draw button
+  myScreen.dRectangle(80, 120, 140, 40, redColour); 
+  myScreen.setFontSize(1);  
+  myScreen.gText(90, 135, "Continue Offline", whiteColour);
+
+  // Wait for touch event
+  while(true)
+  {
+    
+    if(myScreen.isTouch() > 0)
+    {
+      uint16_t  x, y, z;
+      myScreen.getTouch(x, y, z);      
+
+      // Detect touch event, condition for button pressed
+      if(z > 500) { 
+        if ((x >= 80 && x <= 220) && (y >= 68 && y <= 84))
+        {        
+            // Display screen to configure Wifi
+            configureWifi();  
+        }
+        else if ((x >= 80 && x <= 220) && (y >= 120 && y <= 160))
+        {
+          Dashboard();  
+        }
+      }
+      
+    } // end of if    
+  } // end of while
 }
 
 uint8_t getFingerprintID() {
@@ -480,7 +530,12 @@ void loginPage()
       myScreen.gText(60, 20, "Connected to Wifi", redColour);
       myScreen.gText(80, 50, "Successfully!", redColour);
 
+      online = true;
       delay(1000);
+
+      if (auth_method.equals("fingerprint")) {
+        Dashboard();  
+      }
 
       loginForm();
     }
@@ -673,34 +728,43 @@ void Dashboard() {
   myScreen.clear(whiteColour);
   myScreen.setFontSize(myScreen.fontMax() - 0);
   myScreen.gText(100, 20, "Dashboard", redColour);  
+
+  if(online) {
+    String resp1 = getTemp();  
+    resp1.replace("\"", "");
+    Serial.println(resp1);
+    String success = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
+    resp1 = resp1.substring(resp1.indexOf(',')+2);
+    String set_temp = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
+    desired_temp = set_temp.toInt();
+    resp1 = resp1.substring(resp1.indexOf(',')+2);
+    String machine_status = resp1.substring(resp1.indexOf(':') + 2);
   
-  String resp1 = getTemp();  
-  resp1.replace("\"", "");
-  Serial.println(resp1);
-  String success = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
-  resp1 = resp1.substring(resp1.indexOf(',')+2);
-  String set_temp = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
-  resp1 = resp1.substring(resp1.indexOf(',')+2);
-  String machine_status = resp1.substring(resp1.indexOf(':') + 2);
+    Serial.println(success);
+    Serial.println(set_temp);
+    Serial.println(machine_status);
+  
+    if(machine_status.equals("On"))
+    {
+      digitalWrite(10, HIGH);  
+    }      
+    else digitalWrite(10, LOW);  
 
-  Serial.println(success);
-  Serial.println(set_temp);
-  Serial.println(machine_status);
-
-  if(machine_status.equals("On"))
-  {
-    digitalWrite(10, HIGH);  
-  }      
-  else digitalWrite(10, LOW);  
+  }
+  else {
+    
+  }
 
   //Temp Control
   myScreen.setFontSize(1);
-  myScreen.gText(10, 60, "Ambient Temperature: 35 &deg;C", blueColour);
+  myScreen.gText(10, 60, "Ambient Temperature: 35 degC", blueColour);
+  myScreen.gText(10, 80, "Water Temperature: 20 degC", blueColour);
+  myScreen.gText(40, 100, "Set Temperature", blackColour);
 
   // + button
-  myScreen.circle (290, 140, 20, redColour);
+  myScreen.circle (170, 140, 20, redColour);
   myScreen.setFontSize(myScreen.fontMax() - 1);  
-  myScreen.gText(285, 133, "+", whiteColour);
+  myScreen.gText(165, 133, "+", whiteColour);
   
   // - button 
   myScreen.circle (30, 140, 20, redColour);
@@ -708,8 +772,8 @@ void Dashboard() {
   myScreen.gText(24, 133, "-", whiteColour);
 
   // Control 2
-  myScreen.setFontSize(myScreen.fontMax() - 0);
-  myScreen.gText(87, 130, "Control 2", blueColour);
+  myScreen.setFontSize(myScreen.fontMax() - 1);
+  myScreen.gText(60, 130, String(desired_temp) + " degC", blueColour);
 
   // Add user button
   myScreen.dRectangle(10, 200, 140, 30, redColour); 
