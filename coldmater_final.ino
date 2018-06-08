@@ -5,6 +5,7 @@
 #include "keyboards.h"
 #include <Adafruit_Fingerprint.h>
 
+
 // For fingerprint scanner
 #define mySerial Serial1
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
@@ -15,7 +16,7 @@ Screen_K35_SPI myScreen;  // Declaring a new screen object
 
 String auth_method;
 bool online = false;
-int desired_temp = 8;
+int desired_temp = 10;
 
 void setup() {
 
@@ -729,6 +730,8 @@ void Dashboard() {
   myScreen.setFontSize(myScreen.fontMax() - 0);
   myScreen.gText(100, 20, "Dashboard", redColour);  
 
+  int start_time = millis();
+
   if(online) {
     String resp1 = getTemp();  
     resp1.replace("\"", "");
@@ -787,6 +790,25 @@ void Dashboard() {
 
   while(true)
   {
+
+    if(online) {
+      int now_time = millis();
+      if(now_time - start_time > 1000 * 5) {        
+        String resp1 = getTemp();  
+        resp1.replace("\"", "");
+        Serial.println(resp1);
+        String success = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
+        resp1 = resp1.substring(resp1.indexOf(',')+2);
+        String set_temp = resp1.substring(resp1.indexOf(':') + 2, resp1.indexOf(','));
+        desired_temp = set_temp.toInt();
+        resp1 = resp1.substring(resp1.indexOf(',')+2);
+        String machine_status = resp1.substring(resp1.indexOf(':') + 2);
+        myScreen.setFontSize(myScreen.fontMax() - 1);
+        myScreen.dRectangle(60, 125, 88, 30, whiteColour); 
+        myScreen.gText(60, 130, String(desired_temp) + " degC", blueColour);
+        start_time = millis();
+      }
+    }
     
     if(myScreen.isTouch() > 0)
     {
